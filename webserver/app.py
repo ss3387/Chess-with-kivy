@@ -1,16 +1,16 @@
-"""from flask import Flask, session 
+from flask import Flask, session 
 from flask_socketio import SocketIO, send
-from flask_socketio import join_room, leave_room"""
+from flask_socketio import join_room, leave_room
 import os
 import uuid
 
 import chess
 
-"""
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 socketio = SocketIO(app)
-"""
+
 
 class GameData:
     def __init__(self):
@@ -48,14 +48,45 @@ class GameData:
             "display_name":displayname
         }
         self.opengames[game_id] = gameobject
+        self.currentlyplaying.append(player_id)
         ## change to player l8r
         return game_id
 
     def get_games(self):
         return self.games
 
-    def add_move(self,gameid,move):
-        self.games[gameid]["moves"].append(move)
+    def add_move(self,game_id,move):
+        game = self.playinggames[game_id]
+
+
+        if chess.Move.from_uci(move) in self.board.legal_moves:
+            game.movelist.append(move)
+            game.board.push_uci(move)
+            self.broadcast_update(game_id)
+
+        elif move == 'e1h1' or move == 'e8h8':
+            game.movelist.append(move)
+            game.board.push_san(move)
+            self.broadcast_update(game_id)
+        
+
+    def broadcast_update(self,game_id):
+        game = self.playinggames[game_id]
+
+        if game.board.is_checkmate() == True:
+            socketio.emit('Game Over', "Check Mate", room=game_id)
+            
+        elif game.board.is_check() == True:
+            socketio.emit('Game Over', "Check Mate", room=game_id)
+            
+        elif game.board.is_game_over() == True:
+            socketio.emit('Game Over', "Unknown Reason", room=game_id)
+        else:
+            socketio.emit('Move', game.movelist[-1], room=game_id)
+            socketio.emit('Legal Moves', game.board.legal_moves, room=game_id)
+
+
+
 
 
 e = GameData()
