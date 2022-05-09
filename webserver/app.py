@@ -1,7 +1,6 @@
 from flask import Flask ,request
 from flask_socketio import SocketIO, send, emit
 from flask_socketio import join_room, leave_room
-from flask_session import Session
 
 import os
 import uuid
@@ -11,7 +10,6 @@ import chess
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-Session(app)
 socketio = SocketIO(app, manage_session=False)
 
 
@@ -20,26 +18,82 @@ class GameData:
         self.opengames = []
         self.playinggames = {}
 
-    def init_game(self,displayname,game_id,play_game):
+    def init_game(self,displayname,player_id,play_game):
 
-        player_id = str(uuid.uuid4().fields[-1])[:5]
         game_id = play_game["game_id"]
-        print(play_game)
+        player1 = play_game["player_id"]
+        player2 = player_id
+        player1displayname = play_game["display_name"][0]
+        player2displayname = displayname
+
+
+
+        ## Send opponents to individual clients
+
+        data = {
+            "type":"Game started",
+            "opponent": player2displayname,
+            "game_id": game_id,
+            "player_id":player1
+        }
+        send(data, room=player1)
+
+        data = {
+            "type":"Game started",
+            "opponent": player1displayname,
+            "game_id": game_id,
+            "player_id":player2
+        }
+        send(data, room=player2)
 
 
         gameobject = {
             "status":"RUNNING",
-            "player_ids": [play_game["player_id"],player_id],
-            "display_names": [play_game["display_name"],displayname],
-            ## Only for displaying move to spectator
-            "movelist": [],
-            "board": chess.Board(),
+            "player1":player1,
+            "player2":player2,
+            "player_ids": [player1,player2],
+            "player1name":player1displayname,
+            "player2name":player2displayname,
+            "display_names": [player1displayname,player2displayname],
+            "game": {
+                "board": chess.Board(),
+                "white":player1,
+                "black":player2,
+
+            }
+
 
         }
         self.playinggames[game_id] = gameobject
 
+        ## Join clients to room so we can broadcast it easily
+        join_room(game_id,player1)
+        join_room(game_id,player2)
+
+        turn = gameobject["game"]["board"].turn
+        if turn == chess.WHITE:
+            
+            turn = "white"
+        else:
+            turn = "black"
+
+        data = {
+            "type":"Game Info",
+            "turn":turn,
+            "unicodeboard":gameobject["game"]["board"].unicode(),
+            "white":player1,
+            "black":player2,
+        }
+
+        send(data, room=game_id)
+
+
+
+
         
-        return gameobject
+        
+
+
 
     def init_new_game(self,displayname,player_id):
         game_id = str(uuid.uuid4().fields[-1])[:5]
@@ -52,53 +106,53 @@ class GameData:
         self.opengames.append(gameobject)
         ## change to player l8r
 
-    def get_playing_games(self):
-        f = self.playinggames
-        e = self.playinggames
-        print(f)
-        d = {}
-        for x in f:
-            print(x)
-            del f[x]["board"]
-            d[x] = f[x]
-        self.playinggames = e
-        return d
 
-    def get_open_games(self):
-        return self.opengames
 
-    def add_move(self,game_id,move):
+    def add_move(self,game_id,player_id,move):
+
         game = self.playinggames[game_id]
 
+        if player_id not in game["player_ids"]:
+            send({"type":"fail", "message":"Wrong game"},room=player_id)
+            return
 
-        if chess.Move.from_uci(move) in self.board.legal_moves:
-            game.movelist.append(move)
-            game.board.push_uci(move)
-            self.broadcast_update(game_id)
-
-        elif move == 'e1h1' or move == 'e8h8':
-            game.movelist.append(move)
-            game.board.push_san(move)
-            self.broadcast_update(game_id)
+        try:
+            if chess.Move.from_uci(move) in game["game"]["board"].legal_moves:
+                game["game"]["board"].push_uci(move)
+    
+            elif move == 'e1h1' or move == 'e8h8':
+                game["game"]["board"].push_san(move)
+            else:
+                send({"type":"fail", "message":"Wrong Move"},room=player_id)
+                return
+        except:
+            send({"type":"fail", "message":"Wrong Move"},room=player_id)
+            return
         
-
-    def broadcast_update(self,game_id):
-        game = self.playinggames[game_id]
-
-        if game.board.is_checkmate() == True:
-            socketio.emit('Game Over', "Check Mate", room=game_id)
+        if game["game"]["board"].is_checkmate() == True:
+            winner = game["game"]["board"].result()
+            send({"type":"Checkmate", "message":winner},room=game_id)
+        elif game["game"]["board"].is_check() == True:
+            winner = game["game"]["board"].result()
+            send({"type":"Checkmate", "message":winner},room=game_id)
             
-        elif game.board.is_check() == True:
-            socketio.emit('Game Over', "Check Mate", room=game_id)
-            
-        elif game.board.is_game_over() == True:
-            socketio.emit('Game Over', "Unknown Reason", room=game_id)
+        elif game["game"]["board"].is_game_over() == True:
+            send({"type":"Game Over", "message":"Unknown reason"},room=game_id)
         else:
-            socketio.emit('Move', game.movelist[-1], room=game_id)
-            socketio.emit('Legal Moves', game.board.legal_moves, room=game_id)
+            turn = game["game"]["board"].turn
+            if turn == chess.WHITE:
+                turn = "white"
+            else:
+                turn = "black"
 
+            print(game["game"]["board"].unicode())
 
-
+            boardupdate = {
+                "type": "Board Update",
+                "unicodeboard":game["game"]["board"].unicode(),
+                "turn":turn
+            }
+            send(boardupdate,room=game_id)
 
 e = GameData()
 
@@ -119,12 +173,12 @@ def handleMessage(msg):
             e.init_new_game(displayname,request.sid)
             send({
     "type":"wait", "message":"awaiting join"})
+            
         else:
             game = e.opengames.pop()
-            gamedata = e.init_game(displayname,request.sid,game)
-            send({"type":"joined", "game_data":gamedata})
-    """elif msg["type"] == "move":
-        if len(e.opengames) == 0:"""
+            e.init_game(displayname,request.sid,game)
+    if msg["type"] == "move":
+        e.add_move(msg["game_id"],request.sid,msg["move"])
             
 
 
@@ -142,5 +196,4 @@ def handleConnection():
     "name":"Server", 
     "message":"New Player Connected"}, )
 
-socketio.run(app, host='0.0.0.0', port=8080, debug = True)
-
+socketio.run(app, port=8080, debug = True)
