@@ -1,6 +1,8 @@
-from flask import Flask, session 
-from flask_socketio import SocketIO, send
+from flask import Flask ,request
+from flask_socketio import SocketIO, send, emit
 from flask_socketio import join_room, leave_room
+from flask_session import Session
+
 import os
 import uuid
 
@@ -9,20 +11,20 @@ import chess
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-socketio = SocketIO(app)
+Session(app)
+socketio = SocketIO(app, manage_session=False)
 
 
 class GameData:
     def __init__(self):
-        self.opengames = {}
+        self.opengames = []
         self.playinggames = {}
-        self.currentlyplaying = []
 
-    def init_game(self,displayname,game_id):
+    def init_game(self,displayname,game_id,play_game):
 
-        play_game = self.opengames[game_id]
-        del self.opengames[game_id]
         player_id = str(uuid.uuid4().fields[-1])[:5]
+        game_id = play_game["game_id"]
+        print(play_game)
 
 
         gameobject = {
@@ -35,22 +37,20 @@ class GameData:
 
         }
         self.playinggames[game_id] = gameobject
-        self.currentlyplaying.append(play_game["player_id"])
-        self.currentlyplaying.append(player_id)
+
+        
         return gameobject
 
-    def init_new_game(self,displayname):
+    def init_new_game(self,displayname,player_id):
         game_id = str(uuid.uuid4().fields[-1])[:5]
-        player_id = str(uuid.uuid4().fields[-1])[:5]
 
         gameobject = {
             "player_id": player_id,
-            "display_name":displayname
+            "display_name":displayname,
+            "game_id":game_id
         }
-        self.opengames[game_id] = gameobject
-        self.currentlyplaying.append(player_id)
+        self.opengames.append(gameobject)
         ## change to player l8r
-        return game_id
 
     def get_playing_games(self):
         f = self.playinggames
@@ -103,15 +103,6 @@ class GameData:
 e = GameData()
 
 
-x = e.init_new_game("maison")
-print(e.opengames)
-
-test = e.init_game("francis",x)
-print(e.playinggames)
-
-x = e.init_new_game("maison")
-print(e.opengames)
-
 @app.route("/playinggames")
 def games():
     return e.get_playing_games()
@@ -120,6 +111,36 @@ def games():
 def adwdw():
     return e.get_open_games()
 
-app.run()
+@socketio.on('message')
+def handleMessage(msg):
+    if msg["type"] == "quickjoin":
+        displayname = msg["displayname"]
+        if len(e.opengames) == 0:
+            e.init_new_game(displayname,request.sid)
+            send({
+    "type":"wait", "message":"awaiting join"})
+        else:
+            game = e.opengames.pop()
+            gamedata = e.init_game(displayname,request.sid,game)
+            send({"type":"joined", "game_data":gamedata})
+    """elif msg["type"] == "move":
+        if len(e.opengames) == 0:"""
+            
 
+
+
+"""
+@socketio.on('join')
+def handleJoin(data):
+  print("joined " + str(data))
+"""
+
+@socketio.on('connect')
+def handleConnection():
+  send({
+    "type":"chat", 
+    "name":"Server", 
+    "message":"New Player Connected"}, )
+
+socketio.run(app, host='0.0.0.0', port=8080, debug = True)
 
