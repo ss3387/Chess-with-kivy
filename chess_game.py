@@ -7,16 +7,12 @@ class initiate_gui(GridLayout):
     def __init__(self, **kwargs):
         # Super is used to call superclass methods, and to access the superclass constructor
         super(initiate_gui, self).__init__(**kwargs)
+
         self.currentlyclicked = ''
         self.prevcolor = ''
         self.movelist = []
-        #self.gui = initiate_gui()
-        #self.board = chess.Board()
-        #self.gui.update_root(self.board.unicode())
-
         threading.Thread(target=self.initiate_client).start()
-        
-        self.SANDICT = {
+        """self.SANDICT = {
             # Pawns
             '♙': '',
             '♟': '',
@@ -35,7 +31,7 @@ class initiate_gui(GridLayout):
             # Kings
             '♔': 'K',
             '♚': 'K'
-        }
+        }"""
 
         self.cols = 8
         self.rows = 8
@@ -68,7 +64,6 @@ class initiate_gui(GridLayout):
     
     def update_root(self, uco: str):
 
-        
         rows = uco.split('\n')
         print(rows)
         for row in range(1,9):
@@ -90,17 +85,19 @@ class initiate_gui(GridLayout):
         else:
             self.movelist.append(f'{piece}{move}')
     
-    def add_move(self, instance, move):
+    def add_move(self, instance, move: str):
+
         if self.currentlyclicked == move:
-            # Unselect
+            # Unselect piece
             self.Buttons[move].background_color = self.prevcolor
             self.currentlyclicked = ''
+        
         elif self.currentlyclicked != '':
-            ## Detect that player wants to play move
-            #uci = self.currentlyclicked + move
-            #self.movequeue.put(uci)
+
+            # Move the piece to the desired square (actual move)
+
             self.Buttons[self.currentlyclicked].background_color = self.prevcolor
-            self.client.do_move(move)
+            self.client.do_move(self.currentlyclicked + move)
 
             '''if chess.Move.from_uci(uci) in self.board.legal_moves:
                 self.add_movelist(self.SANDICT[self.Buttons[self.currentlyclicked].text], move)
@@ -108,6 +105,8 @@ class initiate_gui(GridLayout):
 
             self.currentlyclicked = ''
         else:
+            # Select the piece you want to move
             self.prevcolor = self.Buttons[move].background_color
             self.Buttons[move].background_color = '#BACA2B'
+            # Save the position as currentlyclicked
             self.currentlyclicked = move
