@@ -1,12 +1,11 @@
 import socketio
-import time
 
 
 class ChessClient:
-    def __init__(self, addr, update_board):
+    def __init__(self, addr: str, update_board, name: str):
         self.socketclient = socketio.Client()
         self.socketclient.connect(addr)
-        self.socketclient.send({'type':'quickjoin','displayname':'mohammed'})
+        self.socketclient.send({'type':'quickjoin','displayname':name})
 
         @self.socketclient.on('message')
         def on_message(msg):
@@ -24,6 +23,8 @@ class ChessClient:
             else:
                 print(msg)
 
-    def do_move(self,move):
+    def do_move(self, move):
         self.socketclient.send({'type':'move','game_id':self.game_id,'move':move})
+    
+    
 
