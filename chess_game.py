@@ -72,7 +72,7 @@ class initiate_gui(GridLayout):
     def initiate_client(self):
         try:
             print('started')
-            self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root)
+            self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=input('Enter your name'))
             input('wait...')
             print(self.client.turn)
             print(self.client.opponent)

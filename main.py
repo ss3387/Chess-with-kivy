@@ -1,4 +1,3 @@
-import sys
 from kivy.app import App
 from kivy.config import Config
 from kivy.core.window import Window
