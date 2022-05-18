@@ -1,4 +1,4 @@
-from flask import Flask ,request
+from flask import Flask , request
 from flask_socketio import SocketIO, send, emit
 from flask_socketio import join_room, leave_room
 
@@ -13,12 +13,12 @@ app.secret_key = os.urandom(24)
 socketio = SocketIO(app, manage_session=False)
 
 
-class GameData:
-    def __init__(self):
+class GameData: 
+    def __init__(self): 
         self.opengames = []
         self.playinggames = {}
 
-    def init_game(self,displayname,player_id,play_game):
+    def init_game(self, displayname, player_id, play_game): 
 
         game_id = play_game['game_id']
         player1 = play_game['player_id']
@@ -26,39 +26,36 @@ class GameData:
         player1displayname = play_game['display_name'][0]
         player2displayname = displayname
 
-
-
-        ## Send opponents to individual clients
-
+        # Send opponents to individual clients
         data = {
-            'type':'Game started',
-            'opponent': player2displayname,
-            'game_id': game_id,
-            'player_id':player1
+            'type': 'Game started', 
+            'opponent': player2displayname, 
+            'game_id': game_id, 
+            'player_id': player1
         }
         send(data, room=player1)
 
         data = {
-            'type':'Game started',
-            'opponent': player1displayname,
-            'game_id': game_id,
-            'player_id':player2
+            'type': 'Game started', 
+            'opponent': player1displayname, 
+            'game_id': game_id, 
+            'player_id': player2
         }
         send(data, room=player2)
 
 
         gameobject = {
-            'status':'RUNNING',
-            'player1':player1,
-            'player2':player2,
-            'player_ids': [player1,player2],
-            'player1name':player1displayname,
-            'player2name':player2displayname,
-            'display_names': [player1displayname,player2displayname],
+            'status': 'RUNNING', 
+            'player1': player1, 
+            'player2': player2, 
+            'player_ids': [player1, player2], 
+            'player1name': player1displayname, 
+            'player2name': player2displayname, 
+            'display_names': [player1displayname, player2displayname], 
             'game': {
-                'board': chess.Board(),
-                'white':player1,
-                'black':player2,
+                'board': chess.Board(), 
+                'white': player1, 
+                'black': player2, 
 
             }
 
@@ -67,103 +64,95 @@ class GameData:
         self.playinggames[game_id] = gameobject
 
         ## Join clients to room so we can broadcast it easily
-        join_room(game_id,player1)
-        join_room(game_id,player2)
+        join_room(game_id, player1)
+        join_room(game_id, player2)
 
         turn = gameobject['game']['board'].turn
-        if turn == chess.WHITE:
+        if turn == chess.WHITE: 
             
             turn = 'white'
-        else:
+        else: 
             turn = 'black'
 
         data = {
-            'type':'Game Info',
-            'turn':turn,
-            'unicodeboard':gameobject['game']['board'].unicode(),
-            'white':player1,
-            'black':player2,
+            'type': 'Game Info', 
+            'turn': turn, 
+            'unicodeboard': gameobject['game']['board'].unicode(), 
+            'white': player1, 
+            'black': player2, 
         }
 
         send(data, room=game_id)
 
-
-
-
-        
-        
-
-
-
-    def init_new_game(self,displayname,player_id):
-        game_id = str(uuid.uuid4().fields[-1])[:5]
+    def init_new_game(self, displayname, player_id): 
+        game_id = str(uuid.uuid4().fields[-1])[: 5]
 
         gameobject = {
-            'player_id': player_id,
-            'display_name':displayname,
-            'game_id':game_id
+            'player_id': player_id, 
+            'display_name': displayname, 
+            'game_id': game_id
         }
         self.opengames.append(gameobject)
         ## change to player l8r
 
 
 
-    def add_move(self,game_id,player_id,move):
+    def add_move(self, game_id, player_id, move): 
 
         game = self.playinggames[game_id]
 
-        if player_id not in game['player_ids']:
-            send({'type':'fail', 'message':'Wrong game'},room=player_id)
+        if player_id not in game['player_ids']: 
+            send({'type': 'fail', 'message': 'Wrong game'}, room=player_id)
             return
 
         turn = game['game']['board'].turn
-        if turn == chess.WHITE:
+        if turn == chess.WHITE: 
             
             turn = 'white'
-        else:
+        else: 
             turn = 'black'
         
-        if game['game'][turn] != player_id:
-            send({'type':'fail', 'message':'Not your turn!'},room=player_id)
+        if game['game'][turn] != player_id: 
+            send({'type': 'fail', 'message': 'Not your turn!'}, room=player_id)
             return
 
-        try:
-            if chess.Move.from_uci(move) in game['game']['board'].legal_moves:
+        try: 
+            if chess.Move.from_uci(move) in game['game']['board'].legal_moves: 
                 game['game']['board'].push_uci(move)
     
-            elif move == 'e1h1' or move == 'e8h8':
+            elif move == 'e1h1' or move == 'e8h8': 
                 game['game']['board'].push_san(move)
-            else:
-                send({'type':'fail', 'message':'Wrong Move'},room=player_id)
+            else: 
+                send({'type': 'fail', 'message': 'Wrong Move'}, room=player_id)
                 return
-        except:
-            send({'type':'fail', 'message':'Wrong Move'},room=player_id)
+        except: 
+            send({'type': 'fail', 'message': 'Wrong Move'}, room=player_id)
             return
-        
-        if game['game']['board'].is_checkmate() == True:
+    
+        if game['game']['board'].is_checkmate() == True: 
             winner = game['game']['board'].result()
-            send({'type':'Checkmate', 'message':winner, 'unicodeboard':game['game']['board'].unicode()},room=game_id)
-        elif game['game']['board'].is_check() == True:
+            send({'type': 'Checkmate', 'message': winner, 'unicodeboard': game['game']['board'].unicode()}, room=game_id)
+        elif game['game']['board'].is_check() == True: 
             winner = game['game']['board'].result()
-            send({'type':'Checkmate', 'message':winner, 'unicodeboard':game['game']['board'].unicode()},room=game_id)
-            
-        elif game['game']['board'].is_game_over() == True:
-            send({'type':'Game Over', 'message':'Unknown reason'},room=game_id)
-        else:
+            send({'type': 'Checkmate', 'message': winner, 'unicodeboard': game['game']['board'].unicode()}, room=game_id)
+
+        elif game['game']['board'].is_game_over() == True: 
+            send({'type': 'Game Over', 'message': 'Unknown reason'}, room=game_id)
+        else: 
             turn = game['game']['board'].turn
-            if turn == chess.WHITE:
+            if turn == chess.WHITE: 
                 turn = 'white'
-            else:
+            else: 
                 turn = 'black'
 
             print(game['game']['board'].unicode())
 
             boardupdate = {
-                'type': 'Board Update',
-                'unicodeboard':game['game']['board'].unicode(),
-                'turn':turn
+                'type': 'Board Update', 
+                'unicodeboard': game['game']['board'].unicode(), 
+                'turn': turn
             }
-            send(boardupdate,room=game_id)
+            send(boardupdate, room=game_id)
 
 e = GameData()
 
@@ -176,25 +165,26 @@ def handleMessage(msg):
         displayname = msg['displayname']
         if len(e.opengames) == 0:
             e.init_new_game(displayname,request.sid)
-            send({
-    'type':'wait', 'message':'awaiting join'})
+            send({'type':'wait', 'message':'awaiting join'})
             
         else:
             game = e.opengames.pop()
             e.init_game(displayname,request.sid,game)
-    if msg['type'] == 'move':
+    elif msg['type'] == 'move':
         e.add_move(msg['game_id'],request.sid,msg['move'])
+    if msg['type'] == 'close':
+        socketio.close_room(msg['game_id'])
             
 '''
 @socketio.on('join')
-def handleJoin(data):
+def handleJoin(data): 
   print('joined ' + str(data))
 '''
 
 @socketio.on('connect')
-def handleConnection():
+def handleConnection(): 
   send({
-    'type':'Connected', 
-    'message':'Successfuly connected to server'}, )
+    'type': 'Connected', 
+    'message': 'Successfuly connected to server'}, )
 
-socketio.run(app, host='0.0.0.0' ,port=8080, debug = True)
+socketio.run(app, host='0.0.0.0' , port=8080, debug = True)

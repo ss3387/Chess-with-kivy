@@ -23,6 +23,7 @@ class ChessClient:
             else:
                 print(msg)
 
+
     def do_move(self, move):
         self.socketclient.send({'type':'move','game_id':self.game_id,'move':move})
     
