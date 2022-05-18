@@ -14,26 +14,22 @@ class initiate_gui(GridLayout):
         self.flipped_board = False
         self.movelist = []
         threading.Thread(target=self.initiate_client).start()
-        """self.SANDICT = {
-            # Pawns
-            '♙': '',
-            '♟': '',
-            # Bishops
-            '♗': 'B',
-            '♝': 'B',
-            # Knights
-            '♘': 'N',
-            '♞': 'N',
-            # Rooks
-            '♖': 'R',
-            '♜': 'R',
-            # Queens
-            '♕': 'Q',
-            '♛': 'Q',
-            # Kings
-            '♔': 'K',
-            '♚': 'K'
-        }"""
+
+        self.init_board()
+        
+        """self.other_grid = GridLayout()
+        self.other_grid.cols = 1
+        self.add_widget(self.other_grid)"""
+
+        self.flip_button = Button(text='Flip Board')
+        self.flip_button.bind(on_press = self.flip_board)
+        self.add_widget(self.flip_button)
+
+        self.play_offline = Button(text='Human vs Human')
+        self.play_online = Button(text='Play Online')
+        self.play_computer = Button(text='Play against Computer')
+    
+    def init_board(self):
 
         self.chess_grid = GridLayout()
 
@@ -44,18 +40,6 @@ class initiate_gui(GridLayout):
 
         self.Buttons = {}
 
-        self.init_board()
-        
-        self.other_grid = GridLayout()
-        self.other_grid.cols = 1
-        self.add_widget(self.other_grid)
-
-        self.flip_button = Button(text='Flip Board')
-        self.flip_button.bind(on_press = self.flip_board)
-
-        self.other_grid.add_widget(self.flip_button)
-    
-    def init_board(self):
         for row in range(1, 9):
             for col in range(1, 9):
                 move = chr(ord('`') + col) + str(9-row)
@@ -70,16 +54,8 @@ class initiate_gui(GridLayout):
                 self.chess_grid.add_widget(self.Buttons[move])
 
     def initiate_client(self):
-        try:
-            print('started')
-            self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=input('Enter your name'))
-            input('wait...')
-            print(self.client.turn)
-            print(self.client.opponent)
-            print(self.client.player_id)
-        except:
-            print('Sorry cannot connect to the server')
-    
+        self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=input('Enter your name'))
+        
     def update_root(self, uco: str):
         if self.flipped_board == True:
             uco = uco[::-1]
@@ -101,20 +77,6 @@ class initiate_gui(GridLayout):
                     move = chr(ord('`') + col) + str(9-row)
                 self.chess_grid.add_widget(self.Buttons[move])
         self.flipped_board = not self.flipped_board
-        
-        
-
-    def add_movelist(self, piece, move):
-        if self.board.is_checkmate() == True:
-            self.movelist.append(f'{piece}{move}#')
-        elif self.board.is_check() == True:
-            self.movelist.append(f'{piece}{move}+')
-        elif self.Buttons[move]['text'] != ' ':
-            self.movelist.append(f'{piece}x{move}')
-        elif piece == '':
-            self.movelist.append(move)
-        else:
-            self.movelist.append(f'{piece}{move}')
     
     def add_move(self, instance, move: str):
 
