@@ -1,8 +1,11 @@
-from kivy.app import App
 from kivy.config import Config
+Config.set('graphics', 'window_state', 'maximized')
+#Config.set('graphics', 'resizable', False)
+
+from kivy.app import App
 from chess_game import initiate_gui
 
-Config.set('graphics', 'window_state', 'maximized')
+
 
 class ChessApp(App):
     def build(self):

@@ -1,4 +1,6 @@
+from kivy.uix.label import Label
 from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
 from webserver.realclient import ChessClient
 import threading
@@ -13,21 +15,10 @@ class initiate_gui(GridLayout):
         self.prevcolor = ''
         self.flipped_board = False
         self.movelist = []
-        threading.Thread(target=self.initiate_client).start()
+        #self.initiate_client()
 
         self.init_board()
-        
-        """self.other_grid = GridLayout()
-        self.other_grid.cols = 1
-        self.add_widget(self.other_grid)"""
-
-        self.flip_button = Button(text='Flip Board')
-        self.flip_button.bind(on_press = self.flip_board)
-        self.add_widget(self.flip_button)
-
-        self.play_offline = Button(text='Human vs Human')
-        self.play_online = Button(text='Play Online')
-        self.play_computer = Button(text='Play against Computer')
+        self.init_other_stuff()
     
     def init_board(self):
 
@@ -52,19 +43,86 @@ class initiate_gui(GridLayout):
                 btn.bind(on_press=lambda instance, move= move: self.add_move(instance, move))
                 self.Buttons[move] = btn
                 self.chess_grid.add_widget(self.Buttons[move])
+    
+    def init_other_stuff(self):
+        self.other_grid = GridLayout()
+        self.other_grid.cols = 2
 
-    def initiate_client(self):
-        self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=input('Enter your name'))
+        self.add_widget(self.other_grid)
+
+        self.opponent_name_label = Label(text='rg', font_size=20, size_hint_y=None, size_hint_x=1.3, height=80, halign='left')
+        self.opponent_name_label.valign = 'top'
+        self.other_grid.add_widget(self.opponent_name_label)
+
+        self.flip_button = Button(text='Flip Board', size_hint_y=None, height=80)
+        self.flip_button.bind(on_press = self.flip_board)
+        self.other_grid.add_widget(self.flip_button)
+
+        self.movelist_display = {}
+
+        self.movelist_display['white_moves'] = TextInput(text='\t\t\t\t\t\t\t\t\t White\n', multiline=True, readonly=False, size_hint_y=None, height=400)
+        self.other_grid.add_widget(self.self.movelist_display['white_moves'])
+
+        self.movelist_display['black_moves'] = TextInput(text='\t\t\t\t\t\t\t Black\n', multiline=True, readonly=False, size_hint_y=None, height=400)
+        self.other_grid.add_widget(self.movelist_display['black_moves'])
+
+        self.play_option_grid = GridLayout(cols=2, size_hint_y=None)
+        self.other_grid.add_widget(self.play_option_grid)
+
+        self.play_offline = Button(text='Human vs Human', size_hint_y=None)
+        self.play_option_grid.add_widget(self.play_offline)
+
+        self.play_online = Button(text='Play Online', size_hint_y=None)
+        self.play_online.bind(on_press = self.initiate_client)
+        self.play_option_grid.add_widget(self.play_online)
+
+        self.play_computer = Button(text='Play against Computer', size_hint_y=None)
+        self.other_grid.add_widget(self.play_computer)
+
+        self.ask_name = Label(text='Enter your name: ')
+        self.entry_name = TextInput(multiline=False)
+
+        self.offer_draw_btn = Button(text='Offer a draw')
+        self.resign_btn = Button(text='resign')
         
-    def update_root(self, uco: str):
-        if self.flipped_board == True:
-            uco = uco[::-1]
+
+    def initiate_client(self, instance):
+        if len(self.entry_name.text) != 0:
+            
+            self.client_thread = threading.Thread(target= self.run_client, daemon=True)
+            self.client_thread.start()
+            self.other_grid.remove_widget(self.ask_name)
+            self.other_grid.remove_widget(self.entry_name)
+            self.other_grid.add_widget(self.offer_draw_btn)
+            self.other_grid.add_widget(self.resign_btn)
+            self.game_type = 'Online'
+        else:
+            self.other_grid.add_widget(self.ask_name)
+            self.other_grid.add_widget(self.entry_name)
+    
+    def run_client(self):
+        self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=self.entry_name.text)
+    
+    def update_movelist(self, san: str, turn: str):
+        if turn == 'black':
+            #self.white_moves.insert_text(f"{self.move_count}.\t{san}\n")
+            self.white_moves.text = f"{self.move_count}.\t{san}\n"
+        else:
+            self.black_moves.text = f"{san}\n"
+            self.move_count += 1
+
+    def update_root(self, uco: str, san: str, turn: str):
+        if san != None:
+            self.move_count = 1
+            #self.update_movelist(san, turn)
+            
         rows = uco.split('\n')
         for row in range(1,9):
             currentrow = rows[8-row].split()
             for column in range(1,9):
                 move = chr(ord('`')+column) + str(row)
                 self.Buttons[move].text = currentrow[column-1]
+        
     
     def flip_board(self, instance):
         for sq in self.Buttons.keys():
@@ -86,17 +144,11 @@ class initiate_gui(GridLayout):
             self.currentlyclicked = ''
         
         elif self.currentlyclicked != '':
-
             # Move the piece to the desired square (actual move)
-
             self.Buttons[self.currentlyclicked].background_color = self.prevcolor
             self.client.do_move(self.currentlyclicked + move)
-
-            '''if chess.Move.from_uci(uci) in self.board.legal_moves:
-                self.add_movelist(self.SANDICT[self.Buttons[self.currentlyclicked].text], move)
-                print(self.movelist)'''
-
             self.currentlyclicked = ''
+
         else:
             # Select the piece you want to move
             self.prevcolor = self.Buttons[move].background_color
