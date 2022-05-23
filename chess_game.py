@@ -2,6 +2,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
+from kivy.clock import mainthread
 from webserver.realclient import ChessClient
 import threading
 
@@ -58,13 +59,11 @@ class initiate_gui(GridLayout):
         self.flip_button.bind(on_press = self.flip_board)
         self.other_grid.add_widget(self.flip_button)
 
-        self.movelist_display = {}
+        self.white_moves = TextInput(text='\t\t\t\t\t\t\t\t\t White\n', multiline=True, readonly=False, size_hint_y=None, height=400)
+        self.other_grid.add_widget(self.white_moves)
 
-        self.movelist_display['white_moves'] = TextInput(text='\t\t\t\t\t\t\t\t\t White\n', multiline=True, readonly=False, size_hint_y=None, height=400)
-        self.other_grid.add_widget(self.movelist_display['white_moves'])
-
-        self.movelist_display['black_moves'] = TextInput(text='\t\t\t\t\t\t\t Black\n', multiline=True, readonly=False, size_hint_y=None, height=400)
-        self.other_grid.add_widget(self.movelist_display['black_moves'])
+        self.black_moves = TextInput(text='\t\t\t\t\t\t\t Black\n', multiline=True, readonly=False, size_hint_y=None, height=400)
+        self.other_grid.add_widget(self.black_moves)
 
         self.play_option_grid = GridLayout(cols=2, size_hint_y=None)
         self.other_grid.add_widget(self.play_option_grid)
@@ -102,25 +101,25 @@ class initiate_gui(GridLayout):
     
     def run_client(self):
         self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=self.entry_name.text)
-    
-    def update_movelist(self, san: str, turn: str):
-        if turn == 'black':
-            #self.white_moves.insert_text(f"{self.move_count}.\t{san}\n")
-            self.white_moves.text = f"{self.move_count}.\t{san}\n"
-        else:
-            self.black_moves.text = f"{san}\n"
-            self.move_count += 1
-
-    def update_root(self, uco: str, san: str, turn: str):
+        
+    @mainthread
+    def update_movelist(self, san: str, turn:str):
         if san != None:
             self.move_count = 1
-            #self.update_movelist(san, turn)
-            
+            if turn == 'black':
+                self.white_moves.text = f"{self.move_count}.\t{san}\n"
+            else:
+                self.black_moves.text = f"{san}\n"
+                self.move_count += 1
+
+    def update_root(self, uco: str, san: str, turn: str):
+        
+        self.update_movelist(san, turn)
         rows = uco.split('\n')
         for row in range(1,9):
             currentrow = rows[8-row].split()
             for column in range(1,9):
-                move = chr(ord('`')+column) + str(row)
+                move = chr(ord('`') + column) + str(row)
                 self.Buttons[move].text = currentrow[column-1]
         
     
