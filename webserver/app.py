@@ -1,10 +1,8 @@
 from flask import Flask , request
 from flask_socketio import SocketIO, send, emit
 from flask_socketio import join_room, leave_room
-
 import os
 import uuid
-
 import chess
 
 
@@ -23,7 +21,7 @@ class GameData:
         game_id = play_game['game_id']
         player1 = play_game['player_id']
         player2 = player_id
-        player1displayname = play_game['display_name'][0]
+        player1displayname = play_game['display_name']
         player2displayname = displayname
 
         # Send opponents to individual clients
@@ -59,11 +57,10 @@ class GameData:
 
             }
 
-
         }
         self.playinggames[game_id] = gameobject
 
-        ## Join clients to room so we can broadcast it easily
+        # Join clients to room so we can broadcast it easily
         join_room(game_id, player1)
         join_room(game_id, player2)
 
@@ -78,11 +75,13 @@ class GameData:
             'type': 'Game Info', 
             'turn': turn, 
             'unicodeboard': gameobject['game']['board'].unicode(), 
+            'san': None,
             'white': player1, 
             'black': player2, 
         }
 
         send(data, room=game_id)
+
 
     def init_new_game(self, displayname, player_id): 
         game_id = str(uuid.uuid4().fields[-1])[: 5]
@@ -93,7 +92,7 @@ class GameData:
             'game_id': game_id
         }
         self.opengames.append(gameobject)
-        ## change to player l8r
+        # change to player l8r
 
 
 
@@ -107,7 +106,6 @@ class GameData:
 
         turn = game['game']['board'].turn
         if turn == chess.WHITE: 
-            
             turn = 'white'
         else: 
             turn = 'black'
@@ -118,10 +116,9 @@ class GameData:
 
         try: 
             if chess.Move.from_uci(move) in game['game']['board'].legal_moves: 
+                move_san = game['game']['board'].san(chess.Move.from_uci(move))
+                print(move_san)
                 game['game']['board'].push_uci(move)
-    
-            elif move == 'e1h1' or move == 'e8h8': 
-                game['game']['board'].push_san(move)
             else: 
                 send({'type': 'fail', 'message': 'Wrong Move'}, room=player_id)
                 return
@@ -131,10 +128,12 @@ class GameData:
     
         if game['game']['board'].is_checkmate() == True: 
             winner = game['game']['board'].result()
-            send({'type': 'Checkmate', 'message': winner, 'unicodeboard': game['game']['board'].unicode()}, room=game_id)
+            msg = {'type': 'Checkmate', 'message': winner, 'unicodeboard': game['game']['board'].unicode(), 'san': move_san}
+            send(msg, room=game_id)
         elif game['game']['board'].is_check() == True: 
             winner = game['game']['board'].result()
-            send({'type': 'Checkmate', 'message': winner, 'unicodeboard': game['game']['board'].unicode()}, room=game_id)
+            msg = {'type': 'Check', 'message': winner, 'unicodeboard': game['game']['board'].unicode(), 'san': move_san}
+            send(msg, room=game_id)
 
         elif game['game']['board'].is_game_over() == True: 
             send({'type': 'Game Over', 'message': 'Unknown reason'}, room=game_id)
@@ -150,13 +149,12 @@ class GameData:
             boardupdate = {
                 'type': 'Board Update', 
                 'unicodeboard': game['game']['board'].unicode(), 
-                'turn': turn
+                'turn': turn, 
+                'san': move_san
             }
             send(boardupdate, room=game_id)
 
 e = GameData()
-
-
 
 
 @socketio.on('message')
@@ -164,14 +162,15 @@ def handleMessage(msg):
     if msg['type'] == 'quickjoin':
         displayname = msg['displayname']
         if len(e.opengames) == 0:
-            e.init_new_game(displayname,request.sid)
+            e.init_new_game(displayname, request.sid)
             send({'type':'wait', 'message':'awaiting join'})
             
         else:
             game = e.opengames.pop()
-            e.init_game(displayname,request.sid,game)
+            e.init_game(displayname, request.sid, game)
+            
     elif msg['type'] == 'move':
-        e.add_move(msg['game_id'],request.sid,msg['move'])
+        e.add_move(msg['game_id'], request.sid, msg['move'])
     if msg['type'] == 'close':
         socketio.close_room(msg['game_id'])
             
