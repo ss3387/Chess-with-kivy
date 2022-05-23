@@ -61,7 +61,7 @@ class initiate_gui(GridLayout):
         self.movelist_display = {}
 
         self.movelist_display['white_moves'] = TextInput(text='\t\t\t\t\t\t\t\t\t White\n', multiline=True, readonly=False, size_hint_y=None, height=400)
-        self.other_grid.add_widget(self.self.movelist_display['white_moves'])
+        self.other_grid.add_widget(self.movelist_display['white_moves'])
 
         self.movelist_display['black_moves'] = TextInput(text='\t\t\t\t\t\t\t Black\n', multiline=True, readonly=False, size_hint_y=None, height=400)
         self.other_grid.add_widget(self.movelist_display['black_moves'])
