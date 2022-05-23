@@ -15,8 +15,7 @@ class initiate_gui(GridLayout):
         self.currentlyclicked = ''
         self.prevcolor = ''
         self.flipped_board = False
-        self.movelist = []
-        #self.initiate_client()
+        self.move_count = 1
 
         self.init_board()
         self.init_other_stuff()
@@ -99,18 +98,21 @@ class initiate_gui(GridLayout):
             self.other_grid.add_widget(self.ask_name)
             self.other_grid.add_widget(self.entry_name)
     
+
     def run_client(self):
         self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=self.entry_name.text)
-        
+    
+
     @mainthread
     def update_movelist(self, san: str, turn:str):
         if san != None:
-            self.move_count = 1
             if turn == 'black':
-                self.white_moves.text = f"{self.move_count}.\t{san}\n"
+                self.white_moves.text += f"{self.move_count}.\t{san}\n"
             else:
-                self.black_moves.text = f"{san}\n"
+                self.black_moves.text += f"{san}\n"
                 self.move_count += 1
+            print(self.move_count)
+
 
     def update_root(self, uco: str, san: str, turn: str):
         
