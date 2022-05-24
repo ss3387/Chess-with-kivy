@@ -6,6 +6,7 @@ from kivy.clock import mainthread
 from matplotlib.pyplot import text
 from webserver.realclient import ChessClient
 import threading
+import time
 
 class initiate_gui(GridLayout):
     def __init__(self, **kwargs):
@@ -87,7 +88,10 @@ class initiate_gui(GridLayout):
             
             self.client_thread = threading.Thread(target= self.run_client, daemon=True)
             self.client_thread.start()
-            
+            self.game_type = 'Online'
+
+            time.sleep(1)
+
             self.other_grid.remove_widget(self.ask_name)
             self.other_grid.remove_widget(self.entry_name)
 
@@ -97,7 +101,7 @@ class initiate_gui(GridLayout):
 
             self.other_grid.add_widget(self.request_takeback)
             self.other_grid.add_widget(self.resign_btn)
-            self.game_type = 'Online'
+            
         else:
             self.other_grid.add_widget(self.ask_name)
             self.other_grid.add_widget(self.entry_name)
@@ -168,7 +172,8 @@ class initiate_gui(GridLayout):
         self.other_grid.remove_widget(self.resign_btn)
         self.other_grid.add_widget(self.request_takeback)
         self.other_grid.add_widget(self.resign_btn)
-
+    
+    @mainthread
     def flip_board(self, instance):
         for sq in self.Buttons.keys():
             self.chess_grid.remove_widget(self.Buttons[sq])
