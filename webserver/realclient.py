@@ -16,9 +16,10 @@ class ChessClient():
                 self.player_id = msg['player_id']
                 self.opponent = msg['opponent']
                 self.opponent_id = msg['opponent_id']
+                self.flip_board = msg['flip_board']
             elif msg['type'] == 'Game Info':
                 self.turn = msg['turn']
-                update_board(msg['unicodeboard'], msg['san'], msg['turn'])
+                update_board(msg['unicodeboard'], msg['san'], msg['turn'], self.flip_board)
                 self.white = msg['white']
                 self.black = msg['black']
             elif msg['type'] == 'Board Update':

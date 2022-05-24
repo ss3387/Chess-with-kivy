@@ -39,7 +39,8 @@ class GameData:
             'opponent': player1displayname, 
             'game_id': game_id, 
             'player_id': player2,
-            'opponent_id': player1
+            'opponent_id': player1,
+            'flip_board': True
         }
         send(data, room=player2)
 
