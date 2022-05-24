@@ -25,12 +25,8 @@ class ChessClient():
                 update_board(msg['unicodeboard'], msg['san'], msg['turn'])
             elif msg['type'] == 'takeback_request':
                 update_board(msg['unicodeboard'], msg['san'], msg['turn'], msg['type'])
-            else:
-                print(msg)
-                try:
-                    update_board(msg['unicodeboard'], msg['san'], msg['turn'])
-                except:
-                    pass
+            elif msg['type'] == 'game_over':
+                update_board(None, None, None, None, msg['result'])
 
 
     def do_move(self, move):

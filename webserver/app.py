@@ -142,7 +142,12 @@ class GameData:
         send(boardupdate, room=game_id)
 
         if game['game']['board'].is_game_over():
-            return # We have to send the result here
+            result_phrases = {
+                '1-0': 'White wins!',
+                '0-1': 'Black wins!',
+                '1/2-1/2': 'It\'s a draw!'
+            }
+            send({'type': 'game_over', 'result': result_phrases[game['game']['board'].result()]}, room=game_id)
 
 e = GameData()
 
