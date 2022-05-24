@@ -81,8 +81,6 @@ class initiate_gui(GridLayout):
         self.ask_name = Label(text='Enter your name: ')
         self.entry_name = TextInput(multiline=False)
 
-        
-        
 
     def initiate_client(self, instance):
         if len(self.entry_name.text) != 0:
@@ -96,13 +94,14 @@ class initiate_gui(GridLayout):
             self.request_takeback = Button(text='Offer a draw')
             self.request_takeback.bind(on_press=self.client.request_takeback)
             self.resign_btn = Button(text='resign')
-            
+
             self.other_grid.add_widget(self.request_takeback)
             self.other_grid.add_widget(self.resign_btn)
             self.game_type = 'Online'
         else:
             self.other_grid.add_widget(self.ask_name)
             self.other_grid.add_widget(self.entry_name)
+
 
     def run_client(self):
         self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=self.entry_name.text)
@@ -129,9 +128,9 @@ class initiate_gui(GridLayout):
             print(self.move_count)
 
 
-    def update_root(self, uco: str, san: str, turn: str, result = ''):
+    def update_root(self, uco: str, san: str, turn: str, msg = ''):
         
-        if result == '':
+        if msg == '' or msg == True:
             self.update_movelist(san, turn)
             if uco != '':
                 rows = uco.split('\n')
@@ -140,7 +139,9 @@ class initiate_gui(GridLayout):
                     for column in range(1,9):
                         move = chr(ord('`') + column) + str(row)
                         self.Buttons[move].text = currentrow[column-1]
-        elif result == 'takeback_request':
+            if msg == True:
+                self.flip_board(None)
+        elif msg == 'takeback_request':
             self.other_grid.remove_widget(self.request_takeback)
             self.other_grid.remove_widget(self.resign_btn)
 
@@ -159,7 +160,7 @@ class initiate_gui(GridLayout):
             if self.game_type == 'Online':
                 self.other_grid.remove_widget(self.request_takeback)
                 self.other_grid.remove_widget(self.resign_btn)
-            self.result = Label(text=result, font_size=20)
+            self.result = Label(text=msg, font_size=20)
             self.other_grid.add_widget(self.result)
         
     def decline_undo(self, instance):
