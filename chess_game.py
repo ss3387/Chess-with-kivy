@@ -3,6 +3,7 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
 from kivy.clock import mainthread
+from matplotlib.pyplot import text
 from webserver.realclient import ChessClient
 import threading
 
@@ -80,8 +81,7 @@ class initiate_gui(GridLayout):
         self.ask_name = Label(text='Enter your name: ')
         self.entry_name = TextInput(multiline=False)
 
-        self.request_takeback = Button(text='Offer a draw')
-        self.resign_btn = Button(text='resign')
+        
         
 
     def initiate_client(self, instance):
@@ -89,8 +89,14 @@ class initiate_gui(GridLayout):
             
             self.client_thread = threading.Thread(target= self.run_client, daemon=True)
             self.client_thread.start()
+            
             self.other_grid.remove_widget(self.ask_name)
             self.other_grid.remove_widget(self.entry_name)
+
+            self.request_takeback = Button(text='Offer a draw')
+            self.request_takeback.bind(on_press=self.client.request_takeback)
+            self.resign_btn = Button(text='resign')
+            
             self.other_grid.add_widget(self.request_takeback)
             self.other_grid.add_widget(self.resign_btn)
             self.game_type = 'Online'
@@ -125,7 +131,7 @@ class initiate_gui(GridLayout):
 
     def update_root(self, uco: str, san: str, turn: str, result = ''):
         
-        if result != '':
+        if result == '':
             self.update_movelist(san, turn)
             if uco != '':
                 rows = uco.split('\n')
@@ -134,6 +140,21 @@ class initiate_gui(GridLayout):
                     for column in range(1,9):
                         move = chr(ord('`') + column) + str(row)
                         self.Buttons[move].text = currentrow[column-1]
+        elif result == 'takeback_request':
+            self.other_grid.remove_widget(self.request_takeback)
+            self.other_grid.remove_widget(self.resign_btn)
+
+            self.accept_or_decline = GridLayout(cols=2)
+
+            accept = Button(text='Accept Takeback')
+            accept.bind(on_press = self.client.accept_takeback)
+            self.accept_or_decline.add_widget(accept)
+
+            decline = Button(text='Decline Takeback')
+            decline.bind(on_press=self.decline_undo)
+            self.accept_or_decline.add_widget(decline)
+
+            self.other_grid.add_widget(self.resign_btn)
         else:
             if self.game_type == 'Online':
                 self.other_grid.remove_widget(self.request_takeback)
@@ -141,7 +162,12 @@ class initiate_gui(GridLayout):
             self.result = Label(text=result, font_size=20)
             self.other_grid.add_widget(self.result)
         
-    
+    def decline_undo(self, instance):
+        self.other_grid.remove_widget(self.accept_or_decline)
+        self.other_grid.remove_widget(self.resign_btn)
+        self.other_grid.add_widget(self.request_takeback)
+        self.other_grid.add_widget(self.resign_btn)
+
     def flip_board(self, instance):
         for sq in self.Buttons.keys():
             self.chess_grid.remove_widget(self.Buttons[sq])
