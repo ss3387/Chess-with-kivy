@@ -170,7 +170,7 @@ def handleMessage(msg):
     elif msg['type'] == 'move':
         e.add_move(msg['game_id'], request.sid, msg['move'])
     elif msg['type'] == 'undo':
-        send({'type': 'takeback_request'}, room=msg['opponent_id'])
+        send({'type': 'takeback_request', 'unicodeboard': None, 'san': None, 'turn': None}, room=msg['opponent_id'])
     elif msg['type'] == 'undo_accepted':
         e.playinggames[msg['game_id']]['board'].pop()
         turn = game['game']['board'].turn
@@ -180,7 +180,7 @@ def handleMessage(msg):
             turn = 'black'
         boardupdate = {
             'type': 'Board Update', 
-            'unicodeboard': game['game']['board'].unicode(), 
+            'unicodeboard': e.playinggames[msg['game_id']]['board'].unicode(), 
             'turn': turn, 
             'san': 'undo'
         }
