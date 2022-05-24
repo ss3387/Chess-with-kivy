@@ -134,7 +134,7 @@ class initiate_gui(GridLayout):
 
     def update_root(self, uco: str, san: str, turn: str, msg = ''):
         
-        if msg == '' or msg == True:
+        if msg == '' or msg == bool:
             self.update_movelist(san, turn)
             if uco != '':
                 rows = uco.split('\n')
