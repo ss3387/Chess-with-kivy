@@ -29,7 +29,8 @@ class GameData:
             'type': 'Game started', 
             'opponent': player2displayname, 
             'game_id': game_id, 
-            'player_id': player1
+            'player_id': player1,
+            'opponent_id': player2
         }
         send(data, room=player1)
 
@@ -37,7 +38,8 @@ class GameData:
             'type': 'Game started', 
             'opponent': player1displayname, 
             'game_id': game_id, 
-            'player_id': player2
+            'player_id': player2,
+            'opponent_id': player1
         }
         send(data, room=player2)
 
@@ -53,7 +55,7 @@ class GameData:
             'game': {
                 'board': chess.Board(), 
                 'white': player1, 
-                'black': player2, 
+                'black': player2,
 
             }
 
@@ -111,7 +113,6 @@ class GameData:
             turn = 'black'
         
         if game['game'][turn] != player_id: 
-            send({'type': 'fail', 'message': 'Not your turn!'}, room=player_id)
             return
 
         try: 
@@ -144,8 +145,6 @@ class GameData:
             else: 
                 turn = 'black'
 
-            print(game['game']['board'].unicode())
-
             boardupdate = {
                 'type': 'Board Update', 
                 'unicodeboard': game['game']['board'].unicode(), 
@@ -160,25 +159,34 @@ e = GameData()
 @socketio.on('message')
 def handleMessage(msg):
     if msg['type'] == 'quickjoin':
-        displayname = msg['displayname']
         if len(e.opengames) == 0:
-            e.init_new_game(displayname, request.sid)
+            e.init_new_game(msg['displayname'], request.sid)
             send({'type':'wait', 'message':'awaiting join'})
             
         else:
             game = e.opengames.pop()
-            e.init_game(displayname, request.sid, game)
+            e.init_game(msg['displayname'], request.sid, game)
             
     elif msg['type'] == 'move':
         e.add_move(msg['game_id'], request.sid, msg['move'])
+    elif msg['type'] == 'undo':
+        send({'type': 'takeback_request'}, room=msg['opponent_id'])
+    elif msg['type'] == 'undo_accepted':
+        e.playinggames[msg['game_id']]['board'].pop()
+        turn = game['game']['board'].turn
+        if turn == chess.WHITE: 
+            turn = 'white'
+        else: 
+            turn = 'black'
+        boardupdate = {
+            'type': 'Board Update', 
+            'unicodeboard': game['game']['board'].unicode(), 
+            'turn': turn, 
+            'san': 'undo'
+        }
+        send(boardupdate, room=msg['game_id'])
     if msg['type'] == 'close':
         socketio.close_room(msg['game_id'])
-            
-'''
-@socketio.on('join')
-def handleJoin(data): 
-  print('joined ' + str(data))
-'''
 
 @socketio.on('connect')
 def handleConnection(): 
