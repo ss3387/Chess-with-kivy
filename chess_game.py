@@ -97,9 +97,10 @@ class initiate_gui(GridLayout):
 
             self.request_takeback = Button(text='Offer a draw')
             self.request_takeback.bind(on_press=self.client.request_takeback)
-            self.resign_btn = Button(text='resign')
-
             self.other_grid.add_widget(self.request_takeback)
+
+            self.resign_btn = Button(text='resign')
+            self.resign_btn.bind(on_press=self.client.resign)
             self.other_grid.add_widget(self.resign_btn)
             
         else:
