@@ -80,7 +80,7 @@ class initiate_gui(GridLayout):
         self.ask_name = Label(text='Enter your name: ')
         self.entry_name = TextInput(multiline=False)
 
-        self.offer_draw_btn = Button(text='Offer a draw')
+        self.request_takeback = Button(text='Offer a draw')
         self.resign_btn = Button(text='resign')
         
 
@@ -91,21 +91,30 @@ class initiate_gui(GridLayout):
             self.client_thread.start()
             self.other_grid.remove_widget(self.ask_name)
             self.other_grid.remove_widget(self.entry_name)
-            self.other_grid.add_widget(self.offer_draw_btn)
+            self.other_grid.add_widget(self.request_takeback)
             self.other_grid.add_widget(self.resign_btn)
             self.game_type = 'Online'
         else:
             self.other_grid.add_widget(self.ask_name)
             self.other_grid.add_widget(self.entry_name)
-    
 
     def run_client(self):
         self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=self.entry_name.text)
     
 
     @mainthread
-    def update_movelist(self, san: str, turn:str):
-        if san != None:
+    def update_movelist(self, san: str, turn: str):
+        if san == 'undo':
+            if self.move_count > 1:
+                white_rows = self.white_moves.text.split('\n')
+                black_rows = self.black_moves.text.split('\n')
+                white_rows.pop()
+                black_rows.pop()
+                self.white_moves.text = '\n'.join(white_rows)
+                self.black_moves.text = '\n'.join(black_rows)
+            else:
+                return
+        elif san != None:
             if turn == 'black':
                 self.white_moves.text += f"{self.move_count}.\t{san}\n"
             else:
@@ -114,15 +123,23 @@ class initiate_gui(GridLayout):
             print(self.move_count)
 
 
-    def update_root(self, uco: str, san: str, turn: str):
+    def update_root(self, uco: str, san: str, turn: str, result = ''):
         
-        self.update_movelist(san, turn)
-        rows = uco.split('\n')
-        for row in range(1,9):
-            currentrow = rows[8-row].split()
-            for column in range(1,9):
-                move = chr(ord('`') + column) + str(row)
-                self.Buttons[move].text = currentrow[column-1]
+        if result != '':
+            self.update_movelist(san, turn)
+            if uco != '':
+                rows = uco.split('\n')
+                for row in range(1,9):
+                    currentrow = rows[8-row].split()
+                    for column in range(1,9):
+                        move = chr(ord('`') + column) + str(row)
+                        self.Buttons[move].text = currentrow[column-1]
+        else:
+            if self.game_type == 'Online':
+                self.other_grid.remove_widget(self.request_takeback)
+                self.other_grid.remove_widget(self.resign_btn)
+            self.result = Label(text=result, font_size=20)
+            self.other_grid.add_widget(self.result)
         
     
     def flip_board(self, instance):
