@@ -127,31 +127,22 @@ class GameData:
             send({'type': 'fail', 'message': 'Wrong Move'}, room=player_id)
             return
     
-        if game['game']['board'].is_checkmate() == True: 
-            winner = game['game']['board'].result()
-            msg = {'type': 'Checkmate', 'message': winner, 'unicodeboard': game['game']['board'].unicode(), 'san': move_san}
-            send(msg, room=game_id)
-        elif game['game']['board'].is_check() == True: 
-            winner = game['game']['board'].result()
-            msg = {'type': 'Check', 'message': winner, 'unicodeboard': game['game']['board'].unicode(), 'san': move_san}
-            send(msg, room=game_id)
-
-        elif game['game']['board'].is_game_over() == True: 
-            send({'type': 'Game Over', 'message': 'Unknown reason'}, room=game_id)
+        turn = game['game']['board'].turn
+        if turn == chess.WHITE: 
+            turn = 'white'
         else: 
-            turn = game['game']['board'].turn
-            if turn == chess.WHITE: 
-                turn = 'white'
-            else: 
-                turn = 'black'
+            turn = 'black'
+        
+        boardupdate = {
+            'type': 'Board Update', 
+            'unicodeboard': game['game']['board'].unicode(), 
+            'turn': turn, 
+            'san': move_san
+        }
+        send(boardupdate, room=game_id)
 
-            boardupdate = {
-                'type': 'Board Update', 
-                'unicodeboard': game['game']['board'].unicode(), 
-                'turn': turn, 
-                'san': move_san
-            }
-            send(boardupdate, room=game_id)
+        if game['game']['board'].is_game_over():
+            return # We have to send the result here
 
 e = GameData()
 
@@ -186,6 +177,7 @@ def handleMessage(msg):
         }
         send(boardupdate, room=msg['game_id'])
     if msg['type'] == 'close':
+        send()
         socketio.close_room(msg['game_id'])
 
 @socketio.on('connect')
