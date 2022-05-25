@@ -171,6 +171,7 @@ def handleMessage(msg):
         send({'type': 'takeback_request', 'unicodeboard': None, 'san': None, 'turn': None}, room=msg['opponent_id'])
     elif msg['type'] == 'undo_accepted':
         e.playinggames[msg['game_id']]['board'].pop()
+        e.playinggames[msg['game_id']]['board'].pop()
         turn = game['game']['board'].turn
         if turn == chess.WHITE: 
             turn = 'white'
