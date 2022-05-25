@@ -1,63 +1,74 @@
+# Importing kivy objects, client, threading and time
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
 from kivy.clock import mainthread
-from matplotlib.pyplot import text
 from webserver.realclient import ChessClient
 import threading
 import time
 
+# This is the main class where everything in the app is stored
 class initiate_gui(GridLayout):
     def __init__(self, **kwargs):
         # Super is used to call superclass methods, and to access the superclass constructor
         super(initiate_gui, self).__init__(**kwargs)
-        self.cols = 2
+        self.cols = 2 # Number of columns in the main grid layout
 
+        # Assigning variables that will be used in other processes
         self.currentlyclicked = ''
         self.prevcolor = ''
         self.flipped_board = False
         self.move_count = 1
 
+        # Initialize the widgets here
         self.init_board()
         self.init_other_stuff()
     
+    # Create the chess board
     def init_board(self):
 
-        self.chess_grid = GridLayout()
-
-        self.chess_grid.cols = 8
-        self.chess_grid.rows = 8
-
+        # Use another gridlayout for chess grid because it needs 8 columns
+        self.chess_grid = GridLayout(cols=8, rows=8)
         self.add_widget(self.chess_grid)
 
+        # Create a dictionary of all the squares on the board
         self.Buttons = {}
 
+        # More effcient way of creating 64 buttons
         for row in range(1, 9):
             for col in range(1, 9):
+                # This gives the notation of the specific square for example 'e4' is 5th column and 4th row
                 move = chr(ord('`') + col) + str(9-row)
+
+                # Change the color when it moves to the next square
                 if (col + row) % 2 == 0 :
                     color =  '#ecebd0'
                 else:
                     color = '#779556'
                 
+                # Create a Button
                 btn = Button(background_normal='', background_color=color, color=(0, 0, 0, 1), font_name='FreeSerif.otf', font_size=32)
+                # Bind the button with add_move function
                 btn.bind(on_press=lambda instance, move= move: self.add_move(instance, move))
+                # Assign the square notation to this button
                 self.Buttons[move] = btn
+                # Add widget on the chess grid
                 self.chess_grid.add_widget(self.Buttons[move])
     
+    # Here it creates the widgets that are need for the player to do something: example joining a game
     def init_other_stuff(self):
-        self.other_grid = GridLayout()
-        self.other_grid.cols = 2
 
+        self.other_grid = GridLayout(cols=2)
         self.add_widget(self.other_grid)
 
-        self.opponent_name_label = Label(text='rg', font_size=20, size_hint_y=None, size_hint_x=1.3, height=80, halign='left')
-        self.opponent_name_label.valign = 'top'
+        # Create a label where it shows the opponent name
+        self.opponent_name_label = Label(text='', font_size=20, size_hint_y=None, size_hint_x=1.3, height=80)
         self.other_grid.add_widget(self.opponent_name_label)
 
+        # A button for flipping the board
         self.flip_button = Button(text='Flip Board', size_hint_y=None, height=80)
-        self.flip_button.bind(on_press = self.flip_board)
+        self.flip_button.bind(on_press = self.flip_board) # Calls "self.flip_board()" when pressed
         self.other_grid.add_widget(self.flip_button)
 
         self.white_moves = TextInput(text='\t\t\t\t\t\t\t\t\t White\n', multiline=True, readonly=False, size_hint_y=None, height=400)
