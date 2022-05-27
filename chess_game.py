@@ -5,6 +5,7 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
 from kivy.clock import mainthread
 from webserver.realclient import ChessClient
+from game import Game
 import threading
 import time
 
@@ -20,6 +21,8 @@ class initiate_gui(GridLayout):
         self.prevcolor = ''
         self.flipped_board = False
         self.move_count = 1
+        self.game_type = None
+        self.game_stared = False
 
         # Initialize the widgets here
         self.init_board()
@@ -48,7 +51,7 @@ class initiate_gui(GridLayout):
                     color = '#779556'
                 
                 # Create a Button
-                btn = Button(background_normal='', background_color=color, color=(0, 0, 0, 1), font_name='C:/chess_with_kivy/FreeSerif.otf', font_size=32)
+                btn = Button(background_normal='', background_color=color, color=(0, 0, 0, 1), font_name='C:/chess_with_kivy/FreeSerif.otf', font_size=50)
                 # Bind the button with add_move function
                 btn.bind(on_press=lambda instance, move= move: self.add_move(instance, move))
                 # Assign the square notation to this button
@@ -81,6 +84,7 @@ class initiate_gui(GridLayout):
         self.other_grid.add_widget(self.play_option_grid)
 
         self.play_offline = Button(text='Human vs Human', size_hint_y=None)
+        self.play_offline.bind(on_press=self.run_offline_game)
         self.play_option_grid.add_widget(self.play_offline)
 
         self.play_online = Button(text='Play Online', size_hint_y=None)
@@ -88,6 +92,7 @@ class initiate_gui(GridLayout):
         self.play_option_grid.add_widget(self.play_online)
 
         self.play_computer = Button(text='Play against Computer', size_hint_y=None)
+        self.play_computer.bind(on_press=lambda instance: self.run_offline_game(instance, against_computer=True, level= 8))
         self.other_grid.add_widget(self.play_computer)
 
         self.ask_name = Label(text='Enter your name: ')
@@ -96,33 +101,47 @@ class initiate_gui(GridLayout):
         self.request_takeback = Button(text='Request a takeback')
         self.resign_btn = Button(text='resign')
 
-
+        self.result = Label(font_size=20)
+    
+    def run_offline_game(self, instance, against_computer = False, level = None):
+        threading.Thread(target=self.init_offline_game, args=(against_computer, level), daemon=True).start()
+    
+    def init_offline_game(self, against_computer: bool, level: int):
+        self.game = Game(self.update_root, against_computer, level)
+        self.update_widgets(game_type='Offline')
+        
     def initiate_client(self, instance):
         if len(self.entry_name.text) != 0:
-            
-            self.client_thread = threading.Thread(target= self.run_client, daemon=True)
-            self.client_thread.start()
-            self.game_type = 'Online'
-
-            self.other_grid.remove_widget(self.ask_name)
-            self.other_grid.remove_widget(self.entry_name)
-            
-            time.sleep(2)
-
-            self.request_takeback.bind(on_press=self.client.request_takeback)
-            self.other_grid.add_widget(self.request_takeback)
-            
-            self.resign_btn.bind(on_press=self.client.resign)
-            self.other_grid.add_widget(self.resign_btn)
-            
+            threading.Thread(target= self.run_client, daemon=True).start()
         else:
             self.other_grid.add_widget(self.ask_name)
             self.other_grid.add_widget(self.entry_name)
 
-
     def run_client(self):
         self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=self.entry_name.text)
+        self.update_widgets(game_type='Online')
     
+    @mainthread
+    def update_widgets(self, game_type: str):
+        if game_type == 'Offline':
+            self.undo = Button(text='undo')
+            self.undo.bind(on_press=self.game.undo)
+            if self.result.text != '':
+                self.other_grid.remove_widget(self.result)
+                self.other_grid.add_widget(self.undo)
+            elif self.game_type != 'Offline':
+                self.other_grid.add_widget(self.undo)
+            self.game_type = game_type
+            self.white_moves.text = '\t\t\t\t\t\t\t\t\t White\n'
+            self.black_moves.text = '\t\t\t\t\t\t\t Black\n'
+        else:
+            self.game_type = game_type
+            self.other_grid.remove_widget(self.ask_name)
+            self.other_grid.remove_widget(self.entry_name)
+            self.request_takeback.bind(on_press=self.client.request_takeback)
+            self.other_grid.add_widget(self.request_takeback)
+            self.resign_btn.bind(on_press=self.client.resign)
+            self.other_grid.add_widget(self.resign_btn)
 
     @mainthread
     def update_movelist(self, san: str, turn: str):
@@ -133,8 +152,9 @@ class initiate_gui(GridLayout):
                 for i in range(2):
                     white_rows.pop()
                     black_rows.pop()
-                self.white_moves.text = f"{'\n'.join(white_rows)}\n"
-                self.black_moves.text = f"{'\n'.join(black_rows)}\n"
+                self.white_moves.text = '\n'.join(white_rows) + '\n'
+                self.black_moves.text = '\n'.join(black_rows) + '\n'
+                self.move_count -= 1
             else:
                 return
         elif san != None:
@@ -143,22 +163,23 @@ class initiate_gui(GridLayout):
             else:
                 self.black_moves.text += f"{san}\n"
                 self.move_count += 1
-            print(self.move_count)
     
     @mainthread
-    def update_root(self, uco: str, san: str, turn: str, msg = ''):
-        
-        if msg == '' or type(msg) == bool:
+    def update_root(self, uco: str, san: str, turn: str, msg = '', name = None):
+        if type(name) == str:
+            self.opponent_name_label.text = f"Opponent: {name}"
+        elif msg == '' or type(msg) == bool:
             print('updating')
             self.update_movelist(san, turn)
+            uco = uco.replace('⭘', '\u2800')
             if uco != '':
                 rows = uco.split('\n')
                 for row in range(1,9):
                     currentrow = rows[8-row].split()
                     for column in range(1,9):
                         move = chr(ord('`') + column) + str(row)
-                        self.Buttons[move].text = currentrow[column-1]
-            if msg == True:
+                        self.Buttons[move].text = currentrow[column-1].replace('\u2800', '')
+            if msg:
                 self.flip_board(None)
         elif msg == 'takeback_request':
             self.other_grid.remove_widget(self.request_takeback)
@@ -168,7 +189,7 @@ class initiate_gui(GridLayout):
             self.other_grid.add_widget(self.accept_or_decline)
 
             accept = Button(text='Accept Takeback')
-            accept.bind(on_press = self.client.accept_takeback)
+            accept.bind(on_press = self.accept_takeback)
             self.accept_or_decline.add_widget(accept)
 
             decline = Button(text='Decline Takeback')
@@ -180,9 +201,20 @@ class initiate_gui(GridLayout):
             if self.game_type == 'Online':
                 self.other_grid.remove_widget(self.request_takeback)
                 self.other_grid.remove_widget(self.resign_btn)
-            self.result = Label(text=msg, font_size=20)
+            else:
+                self.other_grid.remove_widget(self.undo)
             self.other_grid.add_widget(self.result)
-        
+            self.result.text = msg
+            self.move_count = 1
+            
+    
+    def accept_takeback(self, instance):
+        self.client.accept_takeback()
+        self.other_grid.remove_widget(self.accept_or_decline)
+        self.other_grid.remove_widget(self.resign_btn)
+        self.other_grid.add_widget(self.request_takeback)
+        self.other_grid.add_widget(self.resign_btn)
+
     def decline_undo(self, instance):
         self.other_grid.remove_widget(self.accept_or_decline)
         self.other_grid.remove_widget(self.resign_btn)
@@ -195,7 +227,7 @@ class initiate_gui(GridLayout):
             self.chess_grid.remove_widget(self.Buttons[sq])
         for row in range(1, 9):
             for col in range(1, 9):
-                if self.flipped_board == False:
+                if not self.flipped_board:
                     move = chr(ord('`') + 9-col) + str(row)
                 else:
                     move = chr(ord('`') + col) + str(9-row)
@@ -212,7 +244,10 @@ class initiate_gui(GridLayout):
         elif self.currentlyclicked != '':
             # Move the piece to the desired square (actual move)
             self.Buttons[self.currentlyclicked].background_color = self.prevcolor
-            self.client.do_move(self.currentlyclicked + move)
+            if self.game_type == 'Online':
+                self.client.do_move(self.currentlyclicked + move)
+            else:
+                self.game.add_move(self.currentlyclicked + move)
             self.currentlyclicked = ''
 
         else:
