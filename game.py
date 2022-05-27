@@ -29,7 +29,7 @@ class Game:
             self.board.pop()
             if self.against_computer:
                 self.board.pop()
-            self.update_board(self.board.unicode(), None, self.turn[self.board.turn])
+            self.update_board(self.board.unicode(), 'undo', self.turn[self.board.turn])
         except:
             pass
     

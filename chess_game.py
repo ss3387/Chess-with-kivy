@@ -74,10 +74,10 @@ class initiate_gui(GridLayout):
         self.flip_button.bind(on_press = self.flip_board) # Calls "self.flip_board()" when pressed
         self.other_grid.add_widget(self.flip_button)
 
-        self.white_moves = TextInput(text='\t\t\t\t\t\t\t\t\t White\n', multiline=True, readonly=False, size_hint_y=None, height=400)
+        self.white_moves = TextInput(text='\t\t\t\t\t\t\t\t\t White\n', multiline=True, readonly=True, size_hint_y=None, height=400)
         self.other_grid.add_widget(self.white_moves)
 
-        self.black_moves = TextInput(text='\t\t\t\t\t\t\t Black\n', multiline=True, readonly=False, size_hint_y=None, height=400)
+        self.black_moves = TextInput(text='\t\t\t\t\t\t\t Black\n', multiline=True, readonly=True, size_hint_y=None, height=400)
         self.other_grid.add_widget(self.black_moves)
 
         self.play_option_grid = GridLayout(cols=2, size_hint_y=None)
@@ -92,7 +92,7 @@ class initiate_gui(GridLayout):
         self.play_option_grid.add_widget(self.play_online)
 
         self.play_computer = Button(text='Play against Computer', size_hint_y=None)
-        self.play_computer.bind(on_press=lambda instance: self.run_offline_game(instance, against_computer=True, level= 8))
+        self.play_computer.bind(on_press=lambda instance: self.run_offline_game(instance, against_computer=True))
         self.other_grid.add_widget(self.play_computer)
 
         self.ask_name = Label(text='Enter your name: ')
@@ -102,24 +102,6 @@ class initiate_gui(GridLayout):
         self.resign_btn = Button(text='resign')
 
         self.result = Label(font_size=20)
-    
-    def run_offline_game(self, instance, against_computer = False, level = None):
-        threading.Thread(target=self.init_offline_game, args=(against_computer, level), daemon=True).start()
-    
-    def init_offline_game(self, against_computer: bool, level: int):
-        self.game = Game(self.update_root, against_computer, level)
-        self.update_widgets(game_type='Offline')
-        
-    def initiate_client(self, instance):
-        if len(self.entry_name.text) != 0:
-            threading.Thread(target= self.run_client, daemon=True).start()
-        else:
-            self.other_grid.add_widget(self.ask_name)
-            self.other_grid.add_widget(self.entry_name)
-
-    def run_client(self):
-        self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=self.entry_name.text)
-        self.update_widgets(game_type='Online')
     
     @mainthread
     def update_widgets(self, game_type: str):
@@ -207,20 +189,6 @@ class initiate_gui(GridLayout):
             self.result.text = msg
             self.move_count = 1
             
-    
-    def accept_takeback(self, instance):
-        self.client.accept_takeback()
-        self.other_grid.remove_widget(self.accept_or_decline)
-        self.other_grid.remove_widget(self.resign_btn)
-        self.other_grid.add_widget(self.request_takeback)
-        self.other_grid.add_widget(self.resign_btn)
-
-    def decline_undo(self, instance):
-        self.other_grid.remove_widget(self.accept_or_decline)
-        self.other_grid.remove_widget(self.resign_btn)
-        self.other_grid.add_widget(self.request_takeback)
-        self.other_grid.add_widget(self.resign_btn)
-    
     @mainthread
     def flip_board(self, instance):
         for sq in self.Buttons.keys():
@@ -256,3 +224,34 @@ class initiate_gui(GridLayout):
             self.Buttons[move].background_color = '#BACA2B'
             # Save the position as currentlyclicked
             self.currentlyclicked = move
+
+    def run_offline_game(self, instance, against_computer = False):
+        threading.Thread(target=self.init_offline_game, args=(against_computer,), daemon=True).start()
+    
+    def init_offline_game(self, against_computer: bool, level = 8):
+        self.game = Game(self.update_root, against_computer, level)
+        self.update_widgets(game_type='Offline')
+        
+    def initiate_client(self, instance):
+        if len(self.entry_name.text) != 0:
+            threading.Thread(target= self.run_client, daemon=True).start()
+        else:
+            self.other_grid.add_widget(self.ask_name)
+            self.other_grid.add_widget(self.entry_name)
+
+    def run_client(self):
+        self.client = ChessClient(addr='http://127.0.0.1:8080', update_board=self.update_root, name=self.entry_name.text)
+        self.update_widgets(game_type='Online')
+    
+    def accept_takeback(self, instance):
+        self.client.accept_takeback()
+        self.other_grid.remove_widget(self.accept_or_decline)
+        self.other_grid.remove_widget(self.resign_btn)
+        self.other_grid.add_widget(self.request_takeback)
+        self.other_grid.add_widget(self.resign_btn)
+
+    def decline_undo(self, instance):
+        self.other_grid.remove_widget(self.accept_or_decline)
+        self.other_grid.remove_widget(self.resign_btn)
+        self.other_grid.add_widget(self.request_takeback)
+        self.other_grid.add_widget(self.resign_btn)
