@@ -17,26 +17,24 @@ class ChessClient():
                 self.opponent = msg['opponent']
                 self.opponent_id = msg['opponent_id']
                 self.flip_board = msg['flip_board']
+                update_board(None, None, None, name=self.opponent)
             elif msg['type'] == 'Game Info':
-                self.turn = msg['turn']
-                update_board(msg['unicodeboard'], msg['san'], msg['turn'], self.flip_board)
-                self.white = msg['white']
-                self.black = msg['black']
+                update_board(msg['unicodeboard'], msg['san'], None, msg=self.flip_board)
             elif msg['type'] == 'Board Update':
                 update_board(msg['unicodeboard'], msg['san'], msg['turn'])
             elif msg['type'] == 'takeback_request':
-                update_board(msg['unicodeboard'], msg['san'], msg['turn'], msg['type'])
+                update_board(msg['unicodeboard'], msg['san'], msg['turn'], msg=msg['type'])
             elif msg['type'] == 'game_over':
-                update_board(None, None, None, None, msg['result'])
+                update_board(None, None, None, msg=msg['result'])
 
 
     def do_move(self, move):
         self.socketclient.send({'type': 'move','game_id': self.game_id,'move': move})
     
     def request_takeback(self, instance):
-        self.socketclient.send({'type': 'undo', 'game_id': self.game_id, 'opponent': self.opponent_id})
+        self.socketclient.send({'type': 'undo', 'game_id': self.game_id, 'opponent_id': self.opponent_id})
     
-    def accept_takeback(self, instance):
+    def accept_takeback(self):
         self.socketclient.send({'type': 'undo_accepted', 'game_id': self.game_id})
     
     def resign(self, instance):
