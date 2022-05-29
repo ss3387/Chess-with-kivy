@@ -2,6 +2,7 @@
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
+from kivy.uix.slider import Slider
 from kivy.uix.gridlayout import GridLayout
 from kivy.clock import mainthread
 from webserver.realclient import ChessClient
@@ -22,7 +23,7 @@ class initiate_gui(GridLayout):
         self.flipped_board = False
         self.move_count = 1
         self.game_type = None
-        self.game_stared = False
+        self.level = None
 
         # Initialize the widgets here
         self.init_board()
@@ -97,6 +98,14 @@ class initiate_gui(GridLayout):
 
         self.ask_name = Label(text='Enter your name: ')
         self.entry_name = TextInput(multiline=False)
+
+        self.level_choosing = GridLayout(cols=1, rows=2)
+        self.ask_level = Label(text='Choose a level (1-20):  1')
+        self.level_slider = Slider(min=1, max=20, step=1, orientation='horizontal')
+        self.level_slider.bind(value=self.level_choice)
+
+        self.level_choosing.add_widget(self.ask_level)
+        self.level_choosing.add_widget(self.level_slider)
 
         self.request_takeback = Button(text='Request a takeback')
         self.resign_btn = Button(text='resign')
@@ -224,11 +233,21 @@ class initiate_gui(GridLayout):
             self.Buttons[move].background_color = '#BACA2B'
             # Save the position as currentlyclicked
             self.currentlyclicked = move
+    
+    def level_choice(self, *args):
+        self.ask_level.text = f"Choose a level:  {args[1]}"
+        self.level = args[1]
 
     def run_offline_game(self, instance, against_computer = False):
-        threading.Thread(target=self.init_offline_game, args=(against_computer,), daemon=True).start()
+        if against_computer and self.level == None:
+            self.other_grid.add_widget(self.level_choosing)
+            self.level = 1
+        else:
+            threading.Thread(target=self.init_offline_game, args=(against_computer, self.level), daemon=True).start()
+            self.other_grid.remove_widget(self.level_choosing)
+            self.level = None
     
-    def init_offline_game(self, against_computer: bool, level = 8):
+    def init_offline_game(self, against_computer: bool, level: int):
         self.game = Game(self.update_root, against_computer, level)
         self.update_widgets(game_type='Offline')
         
