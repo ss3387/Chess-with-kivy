@@ -1,4 +1,4 @@
-# Importing kivy objects, client, threading and time
+# Importing kivy objects, client, threading and os
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
@@ -7,8 +7,8 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.clock import mainthread
 from webserver.realclient import ChessClient
 from game import Game
+import os
 import threading
-import time
 
 # This is the main class where everything in the app is stored
 class initiate_gui(GridLayout):
@@ -24,6 +24,7 @@ class initiate_gui(GridLayout):
         self.move_count = 1
         self.game_type = None
         self.level = None
+        self.font_path = f"{os.getcwd()}\\FreeSerif.otf"
 
         # Initialize the widgets here
         self.init_board()
@@ -39,6 +40,8 @@ class initiate_gui(GridLayout):
         # Create a dictionary of all the squares on the board
         self.Buttons = {}
 
+
+
         # More effcient way of creating 64 buttons
         for row in range(1, 9):
             for col in range(1, 9):
@@ -52,7 +55,7 @@ class initiate_gui(GridLayout):
                     color = '#779556'
                 
                 # Create a Button
-                btn = Button(background_normal='', background_color=color, color=(0, 0, 0, 1), font_name='C:/chess_with_kivy/FreeSerif.otf', font_size=50)
+                btn = Button(background_normal='', background_color=color, color=(0, 0, 0, 1), font_name=self.font_path, font_size=50)
                 # Bind the button with add_move function
                 btn.bind(on_press=lambda instance, move= move: self.add_move(instance, move))
                 # Assign the square notation to this button
@@ -160,7 +163,6 @@ class initiate_gui(GridLayout):
         if type(name) == str:
             self.opponent_name_label.text = f"Opponent: {name}"
         elif msg == '' or type(msg) == bool:
-            print('updating')
             self.update_movelist(san, turn)
             uco = uco.replace('⭘', '\u2800')
             if uco != '':
@@ -197,6 +199,7 @@ class initiate_gui(GridLayout):
             self.other_grid.add_widget(self.result)
             self.result.text = msg
             self.move_count = 1
+            self.game_type = None
             
     @mainthread
     def flip_board(self, instance):
@@ -221,10 +224,11 @@ class initiate_gui(GridLayout):
         elif self.currentlyclicked != '':
             # Move the piece to the desired square (actual move)
             self.Buttons[self.currentlyclicked].background_color = self.prevcolor
-            if self.game_type == 'Online':
-                self.client.do_move(self.currentlyclicked + move)
-            else:
-                self.game.add_move(self.currentlyclicked + move)
+            if self.game_type != None:
+                if self.game_type == 'Online':
+                    self.client.do_move(self.currentlyclicked + move)
+                else:
+                    self.game.add_move(self.currentlyclicked + move)
             self.currentlyclicked = ''
 
         else:
@@ -274,3 +278,4 @@ class initiate_gui(GridLayout):
         self.other_grid.remove_widget(self.resign_btn)
         self.other_grid.add_widget(self.request_takeback)
         self.other_grid.add_widget(self.resign_btn)
+        

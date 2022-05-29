@@ -7,7 +7,12 @@ class Game:
         self.turn = {chess.WHITE: 'white', chess.BLACK: 'black'}
         self.update_board = update_board
         self.update_board(self.board.unicode(), None, self.turn[self.board.turn])
-        self.results = {'1-0': 'White won', '0-1': 'Black won', '1/2-1/2': 'It\'s a draw'}
+        self.result_phrases = {
+                '1-0': 'Checkmate. White is victorious',
+                '0-1': 'Checkmate. Black is victorious',
+                '1/2-1/2': 'It\'s a draw!'
+            }
+        self.board.outcome
         self.against_computer = against_computer
         if self.against_computer:
             self.initiate_chess_engine(level)

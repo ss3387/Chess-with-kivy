@@ -17,7 +17,7 @@ class ChessApp(App):
     
     def on_close(self, *args):
         if self.game.game_type == 'Online':
-            self.game.client.resign(True)
+            self.game.client.resign()
         self.stop()
  
 app = ChessApp()
