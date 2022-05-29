@@ -7,7 +7,7 @@ class ChessClient():
         self.socketclient.connect(addr)
         self.socketclient.send({'type': 'quickjoin','displayname': name})
         
-        self.game_id, self.player_id, self.opponent, self.opponent_id, self.flip_board = None
+        self.game_id = self.player_id = self.opponent = self.opponent_id = self.flip_board = None
 
         @self.socketclient.on('message')
         def on_message(msg: dict):
