@@ -56,7 +56,8 @@ class GameData:
             'game': {
                 'board': chess.Board(), 
                 player1: 'white', 
-                player2: 'black'
+                player2: 'black', 
+                
             }
 
         }
@@ -95,18 +96,16 @@ class GameData:
         if player_id not in game['player_ids']: 
             return
 
-        turn = game['game']['board'].turn
-        if turn == chess.WHITE: 
+        if game['game']['board'].turn: 
             turn = 'white'
         else: 
             turn = 'black'
         
-        if game['game'][turn] != player_id: 
+        if game['game'][player_id] != turn: 
             return
 
         if chess.Move.from_uci(move) in game['game']['board'].legal_moves: 
             move_san = game['game']['board'].san(chess.Move.from_uci(move))
-            print(move_san)
             game['game']['board'].push_uci(move)
         else: 
             return
@@ -126,11 +125,11 @@ class GameData:
 
         if game['game']['board'].is_game_over():
             result_phrases = {
-                '1-0': 'White wins!',
-                '0-1': 'Black wins!',
+                '1-0': 'Checkmate. White is victorious',
+                '0-1': 'Checkmate. Black is victorious',
                 '1/2-1/2': 'It\'s a draw!'
             }
-            send({'type': 'game_over', 'result': result_phrases[game['game']['board'].result()]}, room=game_id)
+            send({'type': 'game_over', 'resign': False, 'result': result_phrases[game['game']['board'].result()]}, room=game_id)
             socketio.close_room(game_id)
 
 e = GameData()
@@ -163,11 +162,12 @@ def handleMessage(msg):
         send(boardupdate, room=msg['game_id'])
     if msg['type'] == 'close' and msg['game_id'] != None:
         result = {
-            'winner': e.playinggames[msg['game_id']]['game'][msg['opponent_id']],
-            'loser': e.playinggames[msg['game_id']]['game'][request.sid]
+            'winner': e.playinggames[msg['game_id']]['game'][msg['opponent_id']].capitalize(),
+            'loser': e.playinggames[msg['game_id']]['game'][request.sid].capitalize()
         }
         message = {
             'type': 'game_over',
+            'resign': True,
             'result': f"{result['loser']} resigned. {result['winner']} is victorious"
         }
         send(message, room=msg['game_id'])

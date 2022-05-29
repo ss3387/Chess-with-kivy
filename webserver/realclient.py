@@ -26,6 +26,7 @@ class ChessClient():
                 update_board(msg['unicodeboard'], msg['san'], msg['turn'], msg=msg['type'])
             elif msg['type'] == 'game_over':
                 update_board(None, None, None, msg=msg['result'])
+                self.resign(resign=msg['resign'], disconnect=True)
 
 
     def do_move(self, move):
@@ -37,6 +38,8 @@ class ChessClient():
     def accept_takeback(self):
         self.socketclient.send({'type': 'undo_accepted', 'game_id': self.game_id})
     
-    def resign(self, instance):
-        self.socketclient.send({'type': 'close', 'game_id': self.game_id, 'opponent_id': self.opponent_id})
-        self.socketclient.disconnect()
+    def resign(self, instance = None, resign = True, disconnect = False):
+        if resign:
+            self.socketclient.send({'type': 'close', 'game_id': self.game_id, 'opponent_id': self.opponent_id})
+        if disconnect:
+            self.socketclient.disconnect()
