@@ -55,9 +55,8 @@ class GameData:
             'display_names': [player1displayname, player2displayname], 
             'game': {
                 'board': chess.Board(), 
-                'white': player1, 
-                'black': player2,
-
+                player1: 'white', 
+                player2: 'black'
             }
 
         }
@@ -70,9 +69,7 @@ class GameData:
         data = {
             'type': 'Game Info', 
             'unicodeboard': gameobject['game']['board'].unicode(), 
-            'san': None,
-            'white': player1, 
-            'black': player2, 
+            'san': None
         }
 
         send(data, room=game_id)
@@ -96,7 +93,6 @@ class GameData:
         game = self.playinggames[game_id]
 
         if player_id not in game['player_ids']: 
-            send({'type': 'fail', 'message': 'Wrong game'}, room=player_id)
             return
 
         turn = game['game']['board'].turn
@@ -108,16 +104,11 @@ class GameData:
         if game['game'][turn] != player_id: 
             return
 
-        try: 
-            if chess.Move.from_uci(move) in game['game']['board'].legal_moves: 
-                move_san = game['game']['board'].san(chess.Move.from_uci(move))
-                print(move_san)
-                game['game']['board'].push_uci(move)
-            else: 
-                send({'type': 'fail', 'message': 'Wrong Move'}, room=player_id)
-                return
-        except: 
-            send({'type': 'fail', 'message': 'Wrong Move'}, room=player_id)
+        if chess.Move.from_uci(move) in game['game']['board'].legal_moves: 
+            move_san = game['game']['board'].san(chess.Move.from_uci(move))
+            print(move_san)
+            game['game']['board'].push_uci(move)
+        else: 
             return
         
         if game['game']['board'].turn: 
@@ -170,8 +161,19 @@ def handleMessage(msg):
             'san': 'undo'
         }
         send(boardupdate, room=msg['game_id'])
-    if msg['type'] == 'close':
+    if msg['type'] == 'close' and msg['game_id'] != None:
+        result = {
+            'winner': e.playinggames[msg['game_id']]['game'][msg['opponent_id']],
+            'loser': e.playinggames[msg['game_id']]['game'][request.sid]
+        }
+        message = {
+            'type': 'game_over',
+            'result': f"{result['loser']} resigned. {result['winner']} is victorious"
+        }
+        send(message, room=msg['game_id'])
         socketio.close_room(msg['game_id'])
+    elif msg['type'] == 'close':
+        e.opengames.pop()
 
 @socketio.on('connect')
 def handleConnection(): 

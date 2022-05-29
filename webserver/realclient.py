@@ -3,11 +3,11 @@ import socketio
 
 class ChessClient():
     def __init__(self, addr: str, update_board, name: str):
-        self.name = name
         self.socketclient = socketio.Client()
         self.socketclient.connect(addr)
-        self.socketclient.send({'type': 'quickjoin','displayname': self.name})
+        self.socketclient.send({'type': 'quickjoin','displayname': name})
         
+        self.game_id, self.player_id, self.opponent, self.opponent_id, self.flip_board = None
 
         @self.socketclient.on('message')
         def on_message(msg: dict):
@@ -38,4 +38,5 @@ class ChessClient():
         self.socketclient.send({'type': 'undo_accepted', 'game_id': self.game_id})
     
     def resign(self, instance):
-        self.socketclient.send({'type': 'close', 'game_id': self.game_id, 'player_name': self.name, 'opponent': self.opponent})
+        self.socketclient.send({'type': 'close', 'game_id': self.game_id, 'opponent_id': self.opponent_id})
+        self.socketclient.disconnect()
